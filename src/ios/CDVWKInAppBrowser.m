@@ -36,6 +36,11 @@
 
 #define    IAB_BRIDGE_NAME @"cordova_iab"
 
+// 定义私有协议头
+// 定制修改-start
+#define    NATIVE_JS_PREFIX @"https://native-js/"
+// 定制修改-end
+
 #define    TOOLBAR_HEIGHT 44.0
 #define    LOCATIONBAR_HEIGHT 21.0
 #define    FOOTER_HEIGHT ((TOOLBAR_HEIGHT) + (LOCATIONBAR_HEIGHT))
@@ -578,7 +583,40 @@ static CDVWKInAppBrowser* instance = nil;
     
     CDVPluginResult* pluginResult = nil;
     
-    if([message.body isKindOfClass:[NSDictionary class]]){
+    if ([message.name isEqualToString:@"cordova"]) {
+        // 获取到根控制器MainViewContoller，因为这个控制器初始化了Cordova插件，需要用这个控制器来调用插件
+        AppDelegate *appdelegate = (AppDelegate *)[UIApplication sharedApplication].delegate;
+        UIViewController *rootViewController = appdelegate.window.rootViewController;
+        CDVViewController *vc = (CDVViewController *) rootViewController;
+        
+        // CDVViewController* vc = (CDVViewController*)self.viewController;
+
+        // 解析调用插件所需要的参数
+        NSArray *jsonEntry = message.body;
+        CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:jsonEntry];
+
+        // 用根控制器上的commandQueue方法，调用插件
+        if (![vc.commandQueue execute:command]) {
+            #ifdef DEBUG
+            NSError* error = nil;
+            NSString* commandJson = nil;
+            NSData* jsonData = [NSJSONSerialization dataWithJSONObject:jsonEntry
+                                                            options:0
+                                                              error:&error];
+
+            if (error == nil) {
+             commandJson = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+            }
+
+            static NSUInteger maxLogLength = 1024;
+            NSString* commandString = ([commandJson length] > maxLogLength) ?
+            [NSString stringWithFormat : @"%@[...]", [commandJson substringToIndex:maxLogLength]] :
+            commandJson;
+
+            NSLog(@"FAILED pluginJSON = %@", commandString);
+            #endif
+        }
+    } else if([message.body isKindOfClass:[NSDictionary class]]){
         NSDictionary* messageContent = (NSDictionary*) message.body;
         NSString* scriptCallbackId = messageContent[@"id"];
         
@@ -748,6 +786,17 @@ BOOL isExiting = FALSE;
     configuration.processPool = [[CDVWKProcessPoolFactory sharedFactory] sharedProcessPool];
 #endif
     [configuration.userContentController addScriptMessageHandler:self name:IAB_BRIDGE_NAME];
+
+    // 注入cordova.js
+    // 定制修改-start
+    [configuration.userContentController addScriptMessageHandler:self name:@"cordova"];
+    [configuration setURLSchemeHandler:[CustomSchemeHandler new] forURLScheme:@"injection"];
+
+    NSString *cordovajs = @"(function(d) { var c = d.createElement('script'); c.src = 'injection://cordova.native.js/cordova.js'; d.body.appendChild(c); })(document)";
+    // 创建WKUserScript
+    WKUserScript *cordovaScript = [[WKUserScript alloc]initWithSource:cordovajs injectionTime:WKUserScriptInjectionTimeAtDocumentEnd forMainFrameOnly:NO];
+    [configuration.userContentController addUserScript:cordovaScript];
+    // 定制修改-end
     
     //WKWebView options
     configuration.allowsInlineMediaPlayback = _browserOptions.allowinlinemediaplayback;
@@ -896,6 +945,18 @@ BOOL isExiting = FALSE;
       self.backButton.tintColor = [self colorFromHexString:_browserOptions.navigationbuttoncolor];
     }
 
+    UILabel *titleLabel = [[UILabel alloc] initWithFrame: CGRectMake(0.0, 11.0f, self.view.frame.size.width, 21.0f)];
+    [titleLabel setFont:[UIFont fontWithName:@"Helvetica-Bold" size:18]];
+    [titleLabel setBackgroundColor: [UIColor clearColor]];
+    [titleLabel setTextColor: [UIColor colorWithRed:157.0/255.0 green:157.0/255.0 blue:157.0/255.0 alpha:1.0]];
+    [titleLabel setText:@""];
+    [titleLabel setTextColor:UIColor.whiteColor];
+    [titleLabel setTextAlignment:NSTextAlignmentCenter];
+    if (_browserOptions.titleCustomText) {
+        [titleLabel setText:_browserOptions.titleCustomText];
+    }
+    UIBarButtonItem *titleButton = [[UIBarButtonItem alloc] initWithCustomView: titleLabel];
+
     // Filter out Navigation Buttons if user requests so
     if (_browserOptions.hidenavigationbuttons) {
         if (_browserOptions.lefttoright) {
@@ -904,9 +965,9 @@ BOOL isExiting = FALSE;
             [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton]];
         }
     } else if (_browserOptions.lefttoright) {
-        [self.toolbar setItems:@[self.backButton, fixedSpaceButton, self.forwardButton, flexibleSpaceButton, self.closeButton]];
+        [self.toolbar setItems:@[self.backButton, fixedSpaceButton, self.forwardButton, flexibleSpaceButton, titleButton, self.closeButton]];
     } else {
-        [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton, self.backButton, fixedSpaceButton, self.forwardButton]];
+        [self.toolbar setItems:@[self.closeButton, titleButton, flexibleSpaceButton, self.backButton, fixedSpaceButton, self.forwardButton]];
     }
     
     self.view.backgroundColor = [UIColor clearColor];
@@ -1244,7 +1305,7 @@ BOOL isExiting = FALSE;
 
 #pragma mark WKScriptMessageHandler delegate
 - (void)userContentController:(nonnull WKUserContentController *)userContentController didReceiveScriptMessage:(nonnull WKScriptMessage *)message {
-    if (![message.name isEqualToString:IAB_BRIDGE_NAME]) {
+    if (![message.name isEqualToString:IAB_BRIDGE_NAME]  && ![message.name isEqualToString:@"cordova"]) {
         return;
     }
     //NSLog(@"Received script message %@", message.body);

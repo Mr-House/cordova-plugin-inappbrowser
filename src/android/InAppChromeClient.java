@@ -18,7 +18,10 @@
 */
 package org.apache.cordova.inappbrowser;
 
+import org.apache.cordova.CordovaBridge;
+import org.apache.cordova.CordovaDialogsHelper;
 import org.apache.cordova.CordovaWebView;
+import org.apache.cordova.CordovaWebViewEngine;
 import org.apache.cordova.LOG;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
@@ -45,6 +48,7 @@ public class InAppChromeClient extends WebChromeClient {
         super();
         this.webView = webView;
     }
+
     /**
      * Handle database quota exceeded notification.
      *
@@ -57,14 +61,15 @@ public class InAppChromeClient extends WebChromeClient {
      */
     @Override
     public void onExceededDatabaseQuota(String url, String databaseIdentifier, long currentQuota, long estimatedSize,
-            long totalUsedQuota, WebStorage.QuotaUpdater quotaUpdater)
-    {
-        LOG.d(LOG_TAG, "onExceededDatabaseQuota estimatedSize: %d  currentQuota: %d  totalUsedQuota: %d", estimatedSize, currentQuota, totalUsedQuota);
+            long totalUsedQuota, WebStorage.QuotaUpdater quotaUpdater) {
+        LOG.d(LOG_TAG, "onExceededDatabaseQuota estimatedSize: %d  currentQuota: %d  totalUsedQuota: %d", estimatedSize,
+                currentQuota, totalUsedQuota);
         quotaUpdater.updateQuota(MAX_QUOTA);
     }
 
     /**
-     * Instructs the client to show a prompt to ask the user to set the Geolocation permission state for the specified origin.
+     * Instructs the client to show a prompt to ask the user to set the Geolocation
+     * permission state for the specified origin.
      *
      * @param origin
      * @param callback
@@ -103,36 +108,62 @@ public class InAppChromeClient extends WebChromeClient {
      */
     @Override
     public boolean onJsPrompt(WebView view, String url, String message, String defaultValue, JsPromptResult result) {
-        // See if the prompt string uses the 'gap-iab' protocol. If so, the remainder should be the id of a callback to execute.
+        // See if the prompt string uses the 'gap-iab' protocol. If so, the remainder
+        // should be the id of a callback to execute.
         if (defaultValue != null && defaultValue.startsWith("gap")) {
-            if(defaultValue.startsWith("gap-iab://")) {
+            if (defaultValue.startsWith("gap-iab://")) {
                 PluginResult scriptResult;
                 String scriptCallbackId = defaultValue.substring(10);
                 if (scriptCallbackId.matches("^InAppBrowser[0-9]{1,10}$")) {
-                    if(message == null || message.length() == 0) {
+                    if (message == null || message.length() == 0) {
                         scriptResult = new PluginResult(PluginResult.Status.OK, new JSONArray());
                     } else {
                         try {
                             scriptResult = new PluginResult(PluginResult.Status.OK, new JSONArray(message));
-                        } catch(JSONException e) {
+                        } catch (JSONException e) {
                             scriptResult = new PluginResult(PluginResult.Status.JSON_EXCEPTION, e.getMessage());
                         }
                     }
                     this.webView.sendPluginResult(scriptResult, scriptCallbackId);
                     result.confirm("");
                     return true;
-                }
-                else {
-                    // Anything else that doesn't look like InAppBrowser0123456789 should end up here
-                    LOG.w(LOG_TAG, "InAppBrowser callback called with invalid callbackId : "+ scriptCallbackId);
+                } else {
+                    // Anything else that doesn't look like InAppBrowser0123456789 should end up
+                    // here
+                    LOG.w(LOG_TAG, "InAppBrowser callback called with invalid callbackId : " + scriptCallbackId);
                     result.cancel();
                     return true;
                 }
-            }
-            else {
-                // Anything else with a gap: prefix should get this message
-                LOG.w(LOG_TAG, "InAppBrowser does not support Cordova API calls: " + url + " " + defaultValue); 
-                result.cancel();
+            } else {
+                // 处理 cordova API回调
+                // 定制修改-start
+                CordovaWebViewEngine engine = webView.getEngine();
+                if (engine != null) {
+                    CordovaBridge cordovaBridge = engine.getCordovaBridge();
+                    if (cordovaBridge != null) {
+                        // Unlike the @JavascriptInterface bridge, this method is always called on the
+                        // UI thread.
+                        String handledRet = cordovaBridge.promptOnJsPrompt(url, message, defaultValue);
+                        if (handledRet != null) {
+                            result.confirm(handledRet);
+                        } else {
+                            final JsPromptResult final_result = result;
+                            CordovaDialogsHelper dialogsHelper = new CordovaDialogsHelper(webView.getContext());
+                            dialogsHelper.showPrompt(message, defaultValue, (success, value) -> {
+                                if (success) {
+                                    final_result.confirm(value);
+                                } else {
+                                    final_result.cancel();
+                                }
+                            });
+                        }
+                    } else {
+                        // Anything else with a gap: prefix should get this message
+                        LOG.w(LOG_TAG, "InAppBrowser does not support Cordova API calls: " + url + " " + defaultValue);
+                        result.cancel();
+                    }
+                }
+                // 定制修改-end
                 return true;
             }
         }
@@ -140,11 +171,13 @@ public class InAppChromeClient extends WebChromeClient {
     }
 
     /**
-     * The InAppWebBrowser WebView is configured to MultipleWindow mode to mitigate a security
+     * The InAppWebBrowser WebView is configured to MultipleWindow mode to mitigate
+     * a security
      * bug found in Chromium prior to version 83.0.4103.106.
      * See https://bugs.chromium.org/p/chromium/issues/detail?id=1083819
      *
-     * Valid Urls set to open in new window will be routed back to load in the original WebView.
+     * Valid Urls set to open in new window will be routed back to load in the
+     * original WebView.
      *
      * @param view
      * @param isDialog
@@ -155,20 +188,19 @@ public class InAppChromeClient extends WebChromeClient {
     @Override
     public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
         WebView inAppWebView = view;
-        final WebViewClient webViewClient =
-                new WebViewClient() {
-                    @Override
-                    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                        inAppWebView.loadUrl(request.getUrl().toString());
-                        return true;
-                    }
+        final WebViewClient webViewClient = new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                inAppWebView.loadUrl(request.getUrl().toString());
+                return true;
+            }
 
-                    @Override
-                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                        inAppWebView.loadUrl(url);
-                        return true;
-                    }
-                };
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                inAppWebView.loadUrl(url);
+                return true;
+            }
+        };
 
         final WebView newWebView = new WebView(view.getContext());
         newWebView.setWebViewClient(webViewClient);

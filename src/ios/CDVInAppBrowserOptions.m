@@ -42,6 +42,7 @@
         self.hidenavigationbuttons = NO;
         self.closebuttoncolor = nil;
         self.lefttoright = false;
+        self.titleCustomText = nil;
         self.toolbarcolor = nil;
         self.toolbartranslucent = YES;
         self.beforeload = @"";

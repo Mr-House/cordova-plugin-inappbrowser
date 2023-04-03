@@ -19,7 +19,7 @@
 -->
 
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
-           id="cordova-plugin-inappbrowser"
+           id="@hi-itech/cordova-plugin-inappbrowser"
       version="5.0.1-dev">
 
     <name>InAppBrowser</name>
@@ -87,6 +87,10 @@
 	    <source-file src="src/ios/CDVWKInAppBrowser.m" />
 	    <header-file src="src/ios/CDVWKInAppBrowserUIDelegate.h" />
 	    <source-file src="src/ios/CDVWKInAppBrowserUIDelegate.m" />
+        <header-file src="src/ios/CustomSchemeHandler.h" />
+	    <source-file src="src/ios/CustomSchemeHandler.m" />
+        <header-file src="src/ios/UIViewController+Present.h" />
+	    <source-file src="src/ios/UIViewController+Present.m" />
 
 	    <framework src="CoreGraphics.framework" />
     </platform>

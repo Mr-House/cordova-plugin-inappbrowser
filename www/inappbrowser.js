@@ -25,7 +25,7 @@
     var modulemapper = require('cordova/modulemapper');
     var urlutil = require('cordova/urlutil');
 
-    function InAppBrowser () {
+    function InAppBrowser() {
         this.channels = {
             beforeload: channel.create('beforeload'),
             loadstart: channel.create('loadstart'),
@@ -114,6 +114,11 @@
         strWindowFeatures = strWindowFeatures || '';
 
         exec(cb, cb, 'InAppBrowser', 'open', [strUrl, strWindowName, strWindowFeatures]);
+
+        // 声明全局变量__globalBrowser，表示当前界面开启了InAppBrowser
+        // 定制修改-start
+        window.__globalBrowser = iab;
+        // 定制修改-end
         return iab;
     };
 })();
