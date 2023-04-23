@@ -18,6 +18,8 @@
  */
 
 #import "CDVWKInAppBrowser.h"
+#import "AppDelegate.h"
+#import "CustomSchemeHandler.h"
 
 #if __has_include(<Cordova/CDVWebViewProcessPoolFactory.h>) // Cordova-iOS >=6
   #import <Cordova/CDVWebViewProcessPoolFactory.h>
