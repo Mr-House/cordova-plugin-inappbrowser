@@ -109,7 +109,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String USER_WIDE_VIEW_PORT = "useWideViewPort";
     private static final String TOOLBAR_COLOR = "toolbarcolor";
     // 定制修改-start
-    private static final String TITLE_CUSTOM_TEXT = "titleCustomText";
+    private static final String TITLE_CUSTOM_TEXT = "titlecustomtext";
     // 定制修改-end
     private static final String CLOSE_BUTTON_CAPTION = "closebuttoncaption";
     private static final String CLOSE_BUTTON_COLOR = "closebuttoncolor";

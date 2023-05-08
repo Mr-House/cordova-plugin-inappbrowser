@@ -954,17 +954,17 @@ BOOL isExiting = FALSE;
     [titleLabel setText:@""];
     [titleLabel setTextColor:UIColor.whiteColor];
     [titleLabel setTextAlignment:NSTextAlignmentCenter];
-    if (_browserOptions.titleCustomText) {
-        [titleLabel setText:_browserOptions.titleCustomText];
+    if (_browserOptions.titlecustomtext) {
+        [titleLabel setText:_browserOptions.titlecustomtext];
     }
     UIBarButtonItem *titleButton = [[UIBarButtonItem alloc] initWithCustomView: titleLabel];
 
     // Filter out Navigation Buttons if user requests so
     if (_browserOptions.hidenavigationbuttons) {
         if (_browserOptions.lefttoright) {
-            [self.toolbar setItems:@[flexibleSpaceButton, self.closeButton]];
+            [self.toolbar setItems:@[flexibleSpaceButton, titleButton, self.closeButton]];
         } else {
-            [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton]];
+            [self.toolbar setItems:@[self.closeButton, titleButton, flexibleSpaceButton]];
         }
     } else if (_browserOptions.lefttoright) {
         [self.toolbar setItems:@[self.backButton, fixedSpaceButton, self.forwardButton, flexibleSpaceButton, titleButton, self.closeButton]];

@@ -1,6 +1,6 @@
 {
   "name": "@hi-itech/cordova-plugin-inappbrowser",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Cordova InAppBrowser Plugin",
   "types": "./types/index.d.ts",
   "cordova": {
