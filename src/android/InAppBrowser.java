@@ -128,6 +128,8 @@ public class InAppBrowser extends CordovaPlugin {
             TITLE_CUSTOM_TEXT, NAVIGATION_COLOR,
             CLOSE_BUTTON_COLOR, FOOTER_COLOR);
 
+    private static final String SCHEME_WEIXIN = "weixin:";
+
     private InAppBrowserDialog dialog;
     private WebView inAppWebView;
     private EditText edittext;
@@ -1324,6 +1326,9 @@ public class InAppBrowser extends CordovaPlugin {
                 } catch (android.content.ActivityNotFoundException e) {
                     LOG.e(LOG_TAG, "Error sending sms " + url + ":" + e.toString());
                 }
+            } else if (url.startsWith(SCHEME_WEIXIN)) {
+                openExternal(url);
+                override = true;
             }
             // Test for whitelisted custom scheme names like mycoolapp:// or
             // twitteroauthresponse:// (Twitter Oauth Response)
