@@ -25,9 +25,8 @@
 
 - (void)webView:(nonnull WKWebView *)webView startURLSchemeTask:(nonnull id<WKURLSchemeTask>)urlSchemeTask  API_AVAILABLE(ios(11.0)){
     NSString *localFileName = [urlSchemeTask.request.URL lastPathComponent];
-    NSLog(@"本地文件名称：%@", localFileName);
     NSString *fileExt = urlSchemeTask.request.URL.pathExtension;
-    NSString *resourceName = [localFileName componentsSeparatedByString:@"."][0];
+    NSString *resourceName = [localFileName stringByDeletingPathExtension];
     NSArray *pathComponents = urlSchemeTask.request.URL.pathComponents;
     NSMutableArray *array = [[NSMutableArray alloc] init];
     [array addObjectsFromArray: pathComponents];
@@ -40,7 +39,6 @@
     NSData *data=[NSData dataWithContentsOfFile:localFilePath];
     
     NSString *fileMIME = [self getMIMETypeWithCAPIAtFilePath:localFilePath];
-    NSLog(@"文件MIME：%@", fileMIME);
     NSDictionary *responseHeader = @{
                                      @"Content-type":fileMIME,
                                      @"Content-length":[NSString stringWithFormat:@"%lu",(unsigned long)[data length]]
